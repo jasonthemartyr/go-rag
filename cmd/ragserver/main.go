@@ -1,13 +1,10 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"net/http"
 )
 
-const defaultOllamaURL = "http://localhost:11434/api/chat"
+// const defaultOllamaURL = "http://localhost:11434/api/chat"
 
 // docker run -d -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama && docker exec -d ollama ollama run llama3
 
@@ -52,58 +49,38 @@ func main() {
 	// if err != nil {
 	// 	fmt.Println(err)
 	// }
-	vDB, err := NewQdrantDB()
+	ragClients, err := NewRAGClients()
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	err = vDB.CreateCollection()
+	err = ragClients.CreateCollection()
+	if err != nil {
+		fmt.Println(err)
+	}
 
 	pikachu := Document{
-		Content: "Pikachu is an Electric-type Pokémon introduced in Generation I. It evolves from Pichu when leveled up with high friendship and evolves into Raichu when exposed to a Thunder Stone.",
+		Content: "Jason Marter is a gangsta-type hotboi. He started as a small-boi-jason and can turn into  a chunky-jason when exposed to chicken wings.",
 		Metadata: map[string]interface{}{
-			"type":       "pokemon",
-			"generation": 1,
-			"number":     25,
-			"category":   "Mouse Pokémon",
+			"type":     "hotboi",
+			"number":   69420,
+			"category": "Gangsta",
 		},
 	}
 
 	docs := []Document{}
 	docs = append(docs, pikachu)
-	points, err := vDB.ProcessDocuments(docs, 100)
+
+	points, err := ragClients.ProcessDocuments(docs, 1000)
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	vDB.AddDocuments(points)
-	// fmt.Println(x)
-	_, err = vDB.SearchDocuments("find me documents about Pikachu")
+	ragClients.AddDocuments(points)
+	resp, err := ragClients.SearchDocuments("get me documents about Jason Marter. what turns him into chunky-jason?")
 	if err != nil {
 		fmt.Println("SearchDocuments ", err)
 	}
+	fmt.Println("RESPONSE: %s", resp)
 
-	// fmt.Println(docs)
-
-}
-
-func talkToOllama(url string, ollamaReq ChatRequest) (*ChatResponse, error) {
-	js, err := json.Marshal(&ollamaReq)
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println(ollamaReq)
-	client := http.Client{}
-	httpReq, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(js))
-	if err != nil {
-		return nil, err
-	}
-	httpResp, err := client.Do(httpReq)
-	if err != nil {
-		return nil, err
-	}
-	defer httpResp.Body.Close()
-	ollamaResp := ChatResponse{}
-	err = json.NewDecoder(httpResp.Body).Decode(&ollamaResp)
-	return &ollamaResp, err
 }

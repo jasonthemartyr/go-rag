@@ -23,3 +23,7 @@ go.work.sum
 
 # env file
 .env
+
+cmd/ragserver/qdrant_storage/
+**/qdrant_storage/
+qdrant_storage/
