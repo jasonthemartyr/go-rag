@@ -24,4 +24,10 @@ type (
 		EvalCount          int         `json:"eval_count"`
 		EvalDuration       int64       `json:"eval_duration"`
 	}
+
+	Document struct {
+		Content   string
+		Embedding []float64
+		Metadata  map[string]interface{}
+	}
 )
