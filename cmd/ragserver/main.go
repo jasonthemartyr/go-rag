@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"os"
+	"strings"
 )
 
 // const defaultOllamaURL = "http://localhost:11434/api/chat"
@@ -9,46 +12,6 @@ import (
 // docker run -d -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama && docker exec -d ollama ollama run llama3
 
 func main() {
-	// start := time.Now()
-	// msg := ChatMessage{
-	// 	Role:    "user",
-	// 	Content: "Why is the sky blue?",
-	// }
-	// req := ChatRequest{
-	// 	Model:    "llama3",
-	// 	Stream:   false,
-	// 	Messages: []ChatMessage{msg},
-	// }
-	// resp, err := talkToOllama(defaultOllamaURL, req)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	os.Exit(1)
-	// }
-	// fmt.Println("here")
-	// fmt.Println("msg: ", resp.Message.Content)
-	// fmt.Printf("Completed in %v", time.Since(start))
-
-	// mDB, err := NewMilvusDB()
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-	// err = mDB.CreateCollection()
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-	// err = mDB.CreateIndex()
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-	// err = mDB.InsertData([]string{"this is a test"})
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-
-	// err = mDB.SearchData([]string{"this is a test"})
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
 	ragClients, err := NewRAGClients()
 	if err != nil {
 		fmt.Println(err)
@@ -77,10 +40,36 @@ func main() {
 	}
 
 	ragClients.AddDocuments(points)
-	resp, err := ragClients.SearchDocuments("get me documents about Jason Marter. what turns him into chunky-jason?")
-	if err != nil {
-		fmt.Println("SearchDocuments ", err)
+	// resp, err := ragClients.SearchDocuments("get me documents about Jason Marter. what turns him into chunky-jason?")
+	// if err != nil {
+	// 	fmt.Println("SearchDocuments ", err)
+	// }
+	// fmt.Println("RESPONSE: %s", resp)
+
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Printf("\nType your questions and press Enter. Type 'exit' to quit.\n")
+
+	for {
+		fmt.Print("Question > ")
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Printf("Error reading input: %v\n", err)
+			continue
+		}
+		input = strings.TrimSpace(input)
+		if strings.ToLower(input) == "exit" {
+			fmt.Println("bye I guess...")
+			break
+		}
+		if input == "" {
+			continue
+		}
+		resp, err := ragClients.SearchDocuments(input)
+		if err != nil {
+			fmt.Println("SearchDocuments ", err)
+		}
+		fmt.Printf("\nRESPONSE:\n%s\n\n", resp)
+
 	}
-	fmt.Println("RESPONSE: %s", resp)
 
 }

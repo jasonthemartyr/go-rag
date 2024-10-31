@@ -9,14 +9,33 @@ docker run -d -p 6333:6333 -p 6334:6334 \
 ```
 
 ```bash
-docker run -d --name milvus_standalone -p 19530:19530 -p 9091:9091 milvusdb/milvus:v2.3.3 milvus run standalone
 
+sysctl -n hw.ncpu
+sysctl hw.memsize | awk '{print $2/1024/1024/1024 " GB"}'
 
-docker run -d --name milvus_standalone \
-  -p 19530:19530 \
-  -p 9091:9091 \
-  -v $(pwd)/milvus_data:/var/lib/milvus \
-  milvusdb/milvus:v2.3.3 milvus run standalone
+docker run -d \
+  --cpus=8 \
+  --memory=12g \
+  -v ollama:/root/.ollama \
+  -p 11434:11434 \
+  --name ollama \
+  ollama/ollama && docker exec -d ollama ollama run llama3
+```
+
+manual query:
+
+```bash
+
+curl localhost:11434/api/chat -d '{
+  "model": "llama3",
+  "messages": [
+    {
+      "role": "user",
+      "content": "can you say hi?"
+    }
+  ],
+  "stream": false
+}'
 ```
 
 ## references

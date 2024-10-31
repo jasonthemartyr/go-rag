@@ -13,17 +13,17 @@ import (
 )
 
 const (
-	vdbHost        = "localhost"
-	vdbPort        = 6334
-	collectionName = "documents"
-	// dimensionEmbedding = 384
+	vdbHost            = "localhost"
+	vdbPort            = 6334
+	collectionName     = "documents"
 	dimensionEmbedding = 4096
 	defaultOllamaURL   = "http://localhost:11434/api/chat"
 )
 
 type RAGHandler struct {
-	QdrantClient   *qdrant.Client
-	OllamaClient   *ollama.Client
+	QdrantClient *qdrant.Client
+	OllamaClient *ollama.Client
+	// OllamaClient   *api.Client //TODO: swap for official llama SDK
 	CollectionName string
 }
 
@@ -36,11 +36,11 @@ func NewRAGClients() (*RAGHandler, error) {
 		return nil, fmt.Errorf("failed to connect to qdrant: %w", err)
 	}
 	ollamaClient := ollama.NewClient()
-	// 	&ollama.Options{
-	// 	BaseURL:    "",
-	// 	HTTPClient: &client.HTTP{},
-	// } //TODO: add conditional for options
 
+	// ollamaClient, err := api.ClientFromEnvironment() //TODO: swap for official llama SDK
+	// if err != nil {
+	// 	return nil, fmt.Errorf("failed to connect to qdrant: %w", err)
+	// }
 	return &RAGHandler{
 		QdrantClient:   qdClient,
 		OllamaClient:   ollamaClient,
@@ -49,15 +49,22 @@ func NewRAGClients() (*RAGHandler, error) {
 }
 
 func (r *RAGHandler) CreateCollection() error {
-	err := r.QdrantClient.CreateCollection(context.Background(), &qdrant.CreateCollection{
-		CollectionName: r.CollectionName,
-		VectorsConfig: qdrant.NewVectorsConfig(&qdrant.VectorParams{
-			Size:     dimensionEmbedding,
-			Distance: qdrant.Distance_Cosine,
-		}),
-	})
+	ctx := context.Background()
+	collectionExists, err := r.QdrantClient.CollectionExists(ctx, r.CollectionName)
 	if err != nil {
 		return err
+	}
+	if !collectionExists {
+		err := r.QdrantClient.CreateCollection(ctx, &qdrant.CreateCollection{
+			CollectionName: r.CollectionName,
+			VectorsConfig: qdrant.NewVectorsConfig(&qdrant.VectorParams{
+				Size:     dimensionEmbedding,
+				Distance: qdrant.Distance_Cosine,
+			}),
+		})
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -97,6 +104,19 @@ func (r *RAGHandler) ProcessDocuments(docs []Document, batchSize int) ([]*qdrant
 			chunks := splitIntoChunks(doc.Content, 1000)
 
 			for k, chunk := range chunks {
+
+				// START ###############################
+				//TODO: swap for official llama SDK
+				// embReq := &api.EmbedRequest{
+				// 	Model: "llama3",
+				// 	Input: chunk,
+				// }
+				// embs, err := r.OllamaClient.Embed(context.Background(), embReq)
+				// if err != nil {
+				// 	return nil, fmt.Errorf("embedding error: %w", err)
+				// }
+				// embedVals := embs.Embeddings[0]
+
 				embReq := &ollama.EmbeddingRequest{
 					Prompt: chunk,
 					Model:  "llama3",
@@ -110,6 +130,7 @@ func (r *RAGHandler) ProcessDocuments(docs []Document, batchSize int) ([]*qdrant
 				for i, val := range embs[0].Vector {
 					embedVals[i] = float32(val)
 				}
+				// END ###############################
 				point := &qdrant.PointStruct{
 					Id:      qdrant.NewIDNum(uint64(i*batchSize + j*len(chunks) + k)),
 					Vectors: qdrant.NewVectors(embedVals...),
@@ -140,6 +161,18 @@ func (r *RAGHandler) AddDocuments(points []*qdrant.PointStruct) (*qdrant.UpdateR
 
 // func (r *RAGHandler) SearchDocuments(searchText string) ([]*qdrant.ScoredPoint, error) {
 func (r *RAGHandler) SearchDocuments(searchText string) (string, error) {
+	// START ###############################
+	//TODO: swap for official llama SDK
+	// embReq := &api.EmbedRequest{
+	// 	Model: "llama3",
+	// 	Input: searchText,
+	// }
+	// embs, err := r.OllamaClient.Embed(context.Background(), embReq)
+	// if err != nil {
+	// 	return "", fmt.Errorf("embedding error: %w", err)
+	// }
+	// searchVals := embs.Embeddings[0]
+
 	embReq := &ollama.EmbeddingRequest{
 		Prompt: searchText,
 		Model:  "llama3",
@@ -153,12 +186,13 @@ func (r *RAGHandler) SearchDocuments(searchText string) (string, error) {
 	for i, val := range embs[0].Vector {
 		searchVals[i] = float32(val)
 	}
+	// END ###############################
 
 	searchResults, err := r.QdrantClient.Query(context.Background(), &qdrant.QueryPoints{
 		CollectionName: r.CollectionName,
 		Query:          qdrant.NewQuery(searchVals...),
-		// WithPayload:    qdrant.NewWithPayload(true), //explicitly return payload otherwise its empty
-		WithPayload: &qdrant.WithPayloadSelector{},
+		WithPayload:    qdrant.NewWithPayload(true), //explicitly return payload otherwise its empty
+		// WithPayload: &qdrant.WithPayloadSelector{},
 		// Filter: &qdrant.Filter{ //TODO: figure out best filtering method
 		// 	Must: []*qdrant.Condition{
 		// 		qdrant.NewMatch("city", "London"),
@@ -174,7 +208,7 @@ func (r *RAGHandler) SearchDocuments(searchText string) (string, error) {
 	for _, point := range searchResults {
 		// fmt.Printf("Score: %.4f\n", point.Score)
 		// fmt.Printf("ID: %v\n", point.Id)
-		fmt.Printf("Payload: %v\n\n", point.Payload)
+		// fmt.Printf("Payload: %v\n\n", point.Payload)
 		if payload, ok := point.Payload["text"]; ok {
 			text := payload.GetStringValue() // or GetKind() to see what type it is
 			// fmt.Printf("Text: %s\n", text)
@@ -196,9 +230,7 @@ func (r *RAGHandler) SearchDocuments(searchText string) (string, error) {
 	}
 	prompt := fmt.Sprintf(`Use the following context to answer the question. 
 	Context: %s
-	
 	Question: %s
-	
 	Answer based on the context provided:`, context, searchText)
 
 	msg := ChatMessage{
