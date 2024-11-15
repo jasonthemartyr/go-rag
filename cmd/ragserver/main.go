@@ -22,8 +22,8 @@ func main() {
 		fmt.Println(err)
 	}
 
-	pikachu := Document{
-		Content: "Jason Marter is a gangsta-type hotboi. He started as a small-boi-jason and can turn into  a chunky-jason when exposed to chicken wings.",
+	jsonBoi := Document{
+		Content: "Jason is a gangsta-type hotboi. He started as a small-boi-jason and can turn into  a chunky-jason when exposed to chicken wings.",
 		Metadata: map[string]interface{}{
 			"type":     "hotboi",
 			"number":   69420,
@@ -32,7 +32,7 @@ func main() {
 	}
 
 	docs := []Document{}
-	docs = append(docs, pikachu)
+	docs = append(docs, jsonBoi)
 
 	points, err := ragClients.ProcessDocuments(docs, 1000)
 	if err != nil {
@@ -40,7 +40,7 @@ func main() {
 	}
 
 	ragClients.AddDocuments(points)
-	// resp, err := ragClients.SearchDocuments("get me documents about Jason Marter. what turns him into chunky-jason?")
+	// resp, err := ragClients.SearchDocuments("get me documents about Jason. what turns him into chunky-jason?")
 	// if err != nil {
 	// 	fmt.Println("SearchDocuments ", err)
 	// }

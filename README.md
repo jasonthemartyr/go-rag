@@ -1,28 +1,34 @@
 # go-rag
 
-Repo meant for deving with RAG and Golang
+Repo meant for dev'ing with RAG and Golang locally.
+
+## Pre-reqs
+
+- [Ollama container](https://ollama.com/blog/ollama-is-now-available-as-an-official-docker-image)
+- [Qdrant Vector DB](https://qdrant.tech/documentation/quickstart/)
+
+Start containers:
 
 ```bash
-docker run -d -p 6333:6333 -p 6334:6334 \
-    -v $(pwd)/qdrant_storage:/qdrant/storage:z \
-    qdrant/qdrant
+make pre-reqs
 ```
 
-```bash
+Test with simple query:
 
+```bash
+$ make test-query
+
+{"model":"llama3","created_at":"2024-11-15T19:47:54.75596596Z","message":{"role":"assistant","content":"Hi! It's nice to meet you. Is there something I can help you with, or would you like to chat?"},"done_reason":"stop","done":true,"total_duration":9561533795,"load_duration":39266250,"prompt_eval_count":15,"prompt_eval_duration":4260226000,"eval_count":26,"eval_duration":5217299000}%
+```
+
+reference command to optionally set memory/cpu for Ollama:
+
+```bash
 sysctl -n hw.ncpu
 sysctl hw.memsize | awk '{print $2/1024/1024/1024 " GB"}'
-
-docker run -d \
-  --cpus=8 \
-  --memory=12g \
-  -v ollama:/root/.ollama \
-  -p 11434:11434 \
-  --name ollama \
-  ollama/ollama && docker exec -d ollama ollama run llama3
 ```
 
-manual query:
+Manual query:
 
 ```bash
 
@@ -40,7 +46,6 @@ curl localhost:11434/api/chat -d '{
 
 ## references
 
-  
   - https://github.com/golang/example/blob/master/ragserver/ragserver/json.go
   
 embeddings:
@@ -48,7 +53,6 @@ embeddings:
     - https://github.com/milosgajdos/go-embeddings/blob/main/ollama/embedding.go
 
 vector DB:
-
  - https://qdrant.tech/documentation/quickstart/
  - https://github.com/qdrant/go-client
  - https://github.com/milvus-io/milvus-sdk-go
